@@ -7,6 +7,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 
@@ -14,15 +15,16 @@ class CatsViewModel(
     private val catsRepository: CatsRepository
 ) : ViewModel() {
 
-    private val _catsStateFlow = MutableStateFlow<Fact?>(null)
-    val catsStateFlow: StateFlow<Fact?> = _catsStateFlow.asStateFlow()
+    private val _catsStateFlow = MutableStateFlow<Result?>(null)
+    val catsStateFlow: StateFlow<Result?> = _catsStateFlow.asStateFlow()
 
     init {
         viewModelScope.launch {
             catsRepository.listenForCatFacts()
                 .flowOn(Dispatchers.IO)
+                .catch { _catsStateFlow.value = Result.Error(it.message.toString()) }
                 .collect {
-                    _catsStateFlow.value = it
+                    _catsStateFlow.value = Result.Success(it)
                 }
             }
         }
